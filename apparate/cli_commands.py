@@ -55,7 +55,7 @@ def _resolve_input(variable, variable_name, config_key, config):
     '-t',
     '--token',
     help=('Databricks API key - '
-          'optional, read from `.apparatecfg` if not provided'),
+          'optional, read from `.apparatecfg` if not provided')
 )
 @click.option(
     '-f',
@@ -63,7 +63,7 @@ def _resolve_input(variable, variable_name, config_key, config):
     type=str,
     help=('Databricks folder to upload to '
           '(e.g. `/Users/my_email@fake_organization.com`) '
-          '- optional, read from `.apparatecfg` if not provided'),
+          '- optional, read from `.apparatecfg` if not provided')
 )
 @click_log.simple_verbosity_option(logger)
 def upload(path, token, folder):
@@ -80,7 +80,8 @@ def upload(path, token, folder):
         token,
         folder,
         update_jobs=False,
-        cleanup=False
+        cleanup=False,
+        update_clusters=False
     )
 
 
@@ -90,7 +91,7 @@ def upload(path, token, folder):
     '--path',
     help=('path to egg file with name as output from setuptools '
           '(e.g. dist/new_library-1.0.0-py3.6.egg)'),
-    required=True,
+    required=True
 )
 @click.option(
     '-t',
@@ -103,7 +104,7 @@ def upload(path, token, folder):
     help=('if cleanup, remove outdated files from production folder; '
           'if no-cleanup, remove nothing'),
     default=True,
-    show_default=True,
+    show_default=True
 )
 @click_log.simple_verbosity_option(logger)
 def upload_and_update(path, token, cleanup):
@@ -132,5 +133,64 @@ def upload_and_update(path, token, cleanup):
         token,
         folder,
         update_jobs=True,
-        cleanup=cleanup
+        cleanup=cleanup,
+        update_clusters=False
+    )
+
+
+@click.command(short_help='upload an egg and update clusters')
+@click.option(
+    '-p',
+    '--path',
+    help=('path to egg file with name as output from setuptools '
+          '(e.g. dist/new_library-1.0.0-py3.6.egg)'),
+    required=True
+)
+@click.option(
+    '-t',
+    '--token',
+    help=('Databricks API key with admin permissions on all jobs using library'
+          ' - optional, read from `.apparatecfg` if not provided')
+)
+@click.option(
+    '-f',
+    '--folder',
+    type=str,
+    help=('Databricks folder to upload to '
+          '(e.g. `/Users/my_email@fake_organization.com`) '
+          '- optional, read from `.apparatecfg` if not provided')
+)
+@click.option(
+    '--cleanup/--no-cleanup',
+    help=('if cleanup, remove outdated files from production folder; '
+          'if no-cleanup, remove nothing'),
+    default=True,
+    show_default=True
+)
+@click_log.simple_verbosity_option(logger)
+def upload_and_update_cluster(path, token, folder, cleanup):
+    """
+    The egg that the provided path points to will be uploaded to Databricks.
+     All jobs which use the same major version of the library will be updated
+     to use the new version, and all version of this library in the production
+     folder with the same major version and a lower minor version will
+     be deleted.
+
+    Unlike `upload_and_update`, `upload_and_update_cluster` ask for a folder
+     in order to protect against updating versions of a library in production.
+
+    All egg names already in Databricks must be properly formatted
+     with versions of the form <name>-0.0.0.
+    """
+    config = _load_config(CFG_FILE)
+    token = _resolve_input(token, 'token', 'token', config)
+
+    update_databricks(
+        logger,
+        path,
+        token,
+        folder,
+        update_jobs=False,
+        cleanup=cleanup,
+        update_clusters=True
     )
